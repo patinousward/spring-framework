@@ -34,6 +34,8 @@ import org.slf4j.spi.LocationAwareLogger;
  * @author Juergen Hoeller
  * @since 5.1
  */
+//这个module依赖的log4j-api和slf4j-api几乎都在这个类中使用
+//https://blog.csdn.net/small_to_large/article/details/86668346
 final class LogAdapter {
 
 	private static final String LOG4J_SPI = "org.apache.logging.log4j.spi.ExtendedLogger";
@@ -85,7 +87,7 @@ final class LogAdapter {
 	 */
 	public static Log createLog(String name) {
 		switch (logApi) {
-			case LOG4J:
+			case LOG4J: //每个日志框架都有相应的adapter
 				return Log4jAdapter.createLog(name);
 			case SLF4J_LAL:
 				return Slf4jAdapter.createLocationAwareLog(name);
@@ -98,6 +100,9 @@ final class LogAdapter {
 				// case of Log4j or SLF4J, we are trying to prevent early initialization
 				// of the JavaUtilLog adapter - e.g. by a JVM in debug mode - when eagerly
 				// trying to parse the bytecode for all the cases of this switch clause.
+
+				//JavaUtilLog 是对java.util.Logger的封装，只有java.util.Logger 和类名2个属性
+				//JavaUtilLog 也是本module中Log的子类L
 				return JavaUtilAdapter.createLog(name);
 		}
 	}
@@ -113,7 +118,7 @@ final class LogAdapter {
 	}
 
 
-	private enum LogApi {LOG4J, SLF4J_LAL, SLF4J, JUL}
+	private enum LogApi {LOG4J, SLF4J_LAL, SLF4J, JUL} //目前支持适配的日志框架
 
 
 	private static class Log4jAdapter {

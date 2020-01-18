@@ -49,6 +49,9 @@ package org.apache.commons.logging;
  * @author Juergen Hoeller (for the {@code spring-jcl} variant)
  * @since 5.0
  */
+
+//是spring日志的入口，因为这个类几乎没子类
+//LogFactory.getLog
 public abstract class LogFactory {
 
 	/**
@@ -64,6 +67,7 @@ public abstract class LogFactory {
 	 * @param name logical name of the <code>Log</code> instance to be returned
 	 */
 	public static Log getLog(String name) {
+		//最终到LogAdapter name是类名
 		return LogAdapter.createLog(name);
 	}
 
