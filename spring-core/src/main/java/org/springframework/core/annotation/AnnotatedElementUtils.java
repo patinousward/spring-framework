@@ -149,6 +149,8 @@ public abstract class AnnotatedElementUtils {
 		if (annotation == null) {
 			return Collections.emptySet();
 		}
+		//AnnotatedElement getAnnotation(Class<? extends Annotation>) --> Annotation
+		//Annotation annotationType() --> Class<? extends Annotation>
 		return getAnnotations(annotation.annotationType()).stream()
 				.map(mergedAnnotation -> mergedAnnotation.getType().getName())
 				.collect(Collectors.toCollection(LinkedHashSet::new));
