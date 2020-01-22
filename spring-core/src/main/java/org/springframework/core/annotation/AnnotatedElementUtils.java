@@ -185,6 +185,8 @@ public abstract class AnnotatedElementUtils {
 	 * @see #getMetaAnnotationTypes
 	 */
 	public static boolean hasMetaAnnotationTypes(AnnotatedElement element, String annotationName) {
+		//某个被注解的元素是否含有第二个参数的元注解
+		//元注解的意思是非直接注解就行
 		return getAnnotations(element).stream(annotationName).anyMatch(MergedAnnotation::isMetaPresent);
 	}
 
@@ -203,6 +205,7 @@ public abstract class AnnotatedElementUtils {
 	 * @see #hasAnnotation(AnnotatedElement, Class)
 	 */
 	public static boolean isAnnotated(AnnotatedElement element, Class<? extends Annotation> annotationType) {
+		//isAnnotated 被注解的元素上是否有某个注解,(包含元注解),如果被标注的元素的子类没有标注注解,则依旧返回false
 		// Shortcut: directly present on the element, with no merging needed?
 		if (AnnotationFilter.PLAIN.matches(annotationType) ||
 				AnnotationsScanner.hasPlainJavaAnnotationsOnly(element)) {
@@ -525,6 +528,7 @@ public abstract class AnnotatedElementUtils {
 	 */
 	public static boolean hasAnnotation(AnnotatedElement element, Class<? extends Annotation> annotationType) {
 		// Shortcut: directly present on the element, with no merging needed?
+		//个元素是否有某个注解,包括元注解,元素的父类有的注解,自己没有的也算上
 		if (AnnotationFilter.PLAIN.matches(annotationType) ||
 				AnnotationsScanner.hasPlainJavaAnnotationsOnly(element)) {
 			return element.isAnnotationPresent(annotationType);

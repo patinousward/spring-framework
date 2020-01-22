@@ -81,7 +81,7 @@ public class AnnotatedElementUtilsTests {
 
 	private static final String TX_NAME = Transactional.class.getName();
 
-
+//-----------------------------getMetaAnnotationTypes------------------
 	@Test
 	public void getMetaAnnotationTypesOnNonAnnotatedClass() {
 		assertThat(getMetaAnnotationTypes(NonAnnotatedClass.class, TransactionalComponent.class).isEmpty()).isTrue();
@@ -99,6 +99,9 @@ public class AnnotatedElementUtilsTests {
 
 	@Test
 	public void getMetaAnnotationTypesOnClassWithMetaDepth2() {
+		//Indexed 是Component中的注解
+		//TransactionalComponent 自定义的注解,是Transactional和Component 的组合
+		//ComposedTransactionalComponent 自定义的注解,其上面的注解是TransactionalComponent
 		Set<String> names = getMetaAnnotationTypes(ComposedTransactionalComponentClass.class, ComposedTransactionalComponent.class);
 		assertThat(names).isEqualTo(names(TransactionalComponent.class, Transactional.class, Component.class, Indexed.class));
 
@@ -109,9 +112,11 @@ public class AnnotatedElementUtilsTests {
 	private Set<String> names(Class<?>... classes) {
 		return stream(classes).map(Class::getName).collect(toSet());
 	}
-
+//----------------------hasMetaAnnotationTypes-----------------
 	@Test
 	public void hasMetaAnnotationTypesOnNonAnnotatedClass() {
+		//hasMetaAnnotationTypes 某个被注解的元素是否含有第二个参数的元注解
+		//元注解的意思是非直接注解就行
 		assertThat(hasMetaAnnotationTypes(NonAnnotatedClass.class, TX_NAME)).isFalse();
 	}
 
@@ -132,7 +137,7 @@ public class AnnotatedElementUtilsTests {
 		assertThat(hasMetaAnnotationTypes(ComposedTransactionalComponentClass.class, Component.class.getName())).isTrue();
 		assertThat(hasMetaAnnotationTypes(ComposedTransactionalComponentClass.class, ComposedTransactionalComponent.class.getName())).isFalse();
 	}
-
+//---------------------------isAnnotated-------------
 	@Test
 	public void isAnnotatedOnNonAnnotatedClass() {
 		assertThat(isAnnotated(NonAnnotatedClass.class, Transactional.class)).isFalse();
@@ -140,7 +145,9 @@ public class AnnotatedElementUtilsTests {
 
 	@Test
 	public void isAnnotatedOnClassWithMetaDepth() {
+		//isAnnotated 被注解的元素上是否有某个注解,(包含元注解),如果被标注的元素的子类没有标注注解,则依旧返回false
 		assertThat(isAnnotated(TransactionalComponentClass.class, TransactionalComponent.class)).isTrue();
+		//SubTransactionalComponentClass 子类没有标注,返回false
 		assertThat(isAnnotated(SubTransactionalComponentClass.class, TransactionalComponent.class)).as("isAnnotated() does not search the class hierarchy.").isFalse();
 		assertThat(isAnnotated(TransactionalComponentClass.class, Transactional.class)).isTrue();
 		assertThat(isAnnotated(TransactionalComponentClass.class, Component.class)).isTrue();
@@ -172,7 +179,7 @@ public class AnnotatedElementUtilsTests {
 		assertThat(isAnnotated(ComposedTransactionalComponentClass.class, Component.class.getName())).isTrue();
 		assertThat(isAnnotated(ComposedTransactionalComponentClass.class, ComposedTransactionalComponent.class.getName())).isTrue();
 	}
-
+//------------------------------hasAnnotation-----------------------
 	@Test
 	public void hasAnnotationOnNonAnnotatedClass() {
 		assertThat(hasAnnotation(NonAnnotatedClass.class, Transactional.class)).isFalse();
@@ -180,6 +187,7 @@ public class AnnotatedElementUtilsTests {
 
 	@Test
 	public void hasAnnotationOnClassWithMetaDepth() {
+		//hasAnnotation 某个元素是否有某个注解,包括元注解,元素的父类有的注解,自己没有的也算上
 		assertThat(hasAnnotation(TransactionalComponentClass.class, TransactionalComponent.class)).isTrue();
 		assertThat(hasAnnotation(SubTransactionalComponentClass.class, TransactionalComponent.class)).isTrue();
 		assertThat(hasAnnotation(TransactionalComponentClass.class, Transactional.class)).isTrue();
@@ -196,7 +204,7 @@ public class AnnotatedElementUtilsTests {
 		assertThat(hasAnnotation(NonNullApi.class, Nonnull.class)).isTrue();
 		assertThat(hasAnnotation(ParametersAreNonnullByDefault.class, Nonnull.class)).isTrue();
 	}
-
+//------------------------------getAllAnnotationAttributes---------------
 	@Test
 	public void getAllAnnotationAttributesOnNonAnnotatedClass() {
 		assertThat(getAllAnnotationAttributes(NonAnnotatedClass.class, TX_NAME)).isNull();
