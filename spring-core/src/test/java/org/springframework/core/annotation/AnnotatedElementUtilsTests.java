@@ -207,6 +207,8 @@ public class AnnotatedElementUtilsTests {
 //------------------------------getAllAnnotationAttributes---------------
 	@Test
 	public void getAllAnnotationAttributesOnNonAnnotatedClass() {
+		//getAllAnnotationAttributes  获取某个元素上的某个注解的所有属性
+		//返回MultiValueMap<String, Object> key 是属性名,object是属性值
 		assertThat(getAllAnnotationAttributes(NonAnnotatedClass.class, TX_NAME)).isNull();
 	}
 
@@ -219,6 +221,7 @@ public class AnnotatedElementUtilsTests {
 
 	@Test
 	public void getAllAnnotationAttributesOnClassWithLocalComposedAnnotationAndInheritedAnnotation() {
+		//元注解的属性也可以获取到
 		MultiValueMap<String, Object> attributes = getAllAnnotationAttributes(SubClassWithInheritedAnnotation.class, TX_NAME);
 		assertThat(attributes).as("Annotation attributes map for @Transactional on SubClassWithInheritedAnnotation").isNotNull();
 		assertThat(attributes.get("qualifier")).isEqualTo(asList("composed2", "transactionManager"));
