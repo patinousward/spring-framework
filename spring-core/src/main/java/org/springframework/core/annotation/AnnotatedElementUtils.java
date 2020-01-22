@@ -118,7 +118,7 @@ public abstract class AnnotatedElementUtils {
 	 */
 	public static Set<String> getMetaAnnotationTypes(AnnotatedElement element,
 			Class<? extends Annotation> annotationType) {
-
+		//获取被标注element 上的某个注解的所有spring注解
 		return getMetaAnnotationTypes(element, element.getAnnotation(annotationType));
 	}
 
