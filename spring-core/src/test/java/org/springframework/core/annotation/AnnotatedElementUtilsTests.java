@@ -90,6 +90,7 @@ public class AnnotatedElementUtilsTests {
 
 	@Test
 	public void getMetaAnnotationTypesOnClassWithMetaDepth1() {
+		//获取被标注元素的元注解(元注解是注解的注解,不包括自己本身的注解)
 		Set<String> names = getMetaAnnotationTypes(TransactionalComponentClass.class, TransactionalComponent.class);
 		assertThat(names).isEqualTo(names(Transactional.class, Component.class, Indexed.class));
 
@@ -282,7 +283,7 @@ public class AnnotatedElementUtilsTests {
 		assertThat(attributes).as("Annotation attributes map for @Nonnull on NonNullApi").isNotNull();
 		assertThat(attributes.get("when")).as("value for NonNullApi").isEqualTo(asList(When.ALWAYS));
 	}
-
+//----------------------getMergedAnnotationAttributes-------------------
 	@Test
 	public void getMergedAnnotationAttributesOnClassWithLocalAnnotation() {
 		Class<?> element = TxConfig.class;
@@ -307,12 +308,14 @@ public class AnnotatedElementUtilsTests {
 
 	@Test
 	public void getMergedAnnotationAttributesOnMetaCycleAnnotatedClassWithMissingTargetMetaAnnotation() {
+		//循环注解,不会一直找
 		AnnotationAttributes attributes = getMergedAnnotationAttributes(MetaCycleAnnotatedClass.class, TX_NAME);
 		assertThat(attributes).as("Should not find annotation attributes for @Transactional on MetaCycleAnnotatedClass").isNull();
 	}
 
 	@Test
 	public void getMergedAnnotationAttributesFavorsLocalComposedAnnotationOverInheritedAnnotation() {
+		//merge的意思是如果自身有注解,父类也有相同的注解,就会对属性进行合并,有默认的优先级
 		Class<?> element = SubClassWithInheritedAnnotation.class;
 		String name = TX_NAME;
 		AnnotationAttributes attributes = getMergedAnnotationAttributes(element, name);
