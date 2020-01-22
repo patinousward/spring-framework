@@ -752,6 +752,9 @@ public abstract class AnnotatedElementUtils {
 	}
 
 	private static MergedAnnotations getAnnotations(AnnotatedElement element) {
+		//SearchStrategy.INHERITED_ANNOTATIONS :搜索策略:会找注解上的注解
+		//AnnotationFilter.PLAIN 过滤 java.lang 和org.springframework.lang 包和其子包
+		//RepeatableContainers.none()  不展开重复的注解
 		return MergedAnnotations.from(element, SearchStrategy.INHERITED_ANNOTATIONS,
 				RepeatableContainers.none(), AnnotationFilter.PLAIN);
 	}
