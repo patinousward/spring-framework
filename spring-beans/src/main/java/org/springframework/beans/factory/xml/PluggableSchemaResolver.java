@@ -60,6 +60,7 @@ public class PluggableSchemaResolver implements EntityResolver {
 	/**
 	 * The location of the file that defines schema mappings.
 	 * Can be present in multiple JAR files.
+	 * 默认 {@link #schemaMappingsLocation} 地址
 	 */
 	public static final String DEFAULT_SCHEMA_MAPPINGS_LOCATION = "META-INF/spring.schemas";
 
@@ -69,9 +70,11 @@ public class PluggableSchemaResolver implements EntityResolver {
 	@Nullable
 	private final ClassLoader classLoader;
 
+	//Schema 文件地址
 	private final String schemaMappingsLocation;
 
 	/** Stores the mapping of schema URL -> local schema path. */
+	//namespaceURI 与 Schema 文件地址的映射集合
 	@Nullable
 	private volatile Map<String, String> schemaMappings;
 
@@ -85,6 +88,7 @@ public class PluggableSchemaResolver implements EntityResolver {
 	 */
 	public PluggableSchemaResolver(@Nullable ClassLoader classLoader) {
 		this.classLoader = classLoader;
+		//schemaMappingsLocation 使用默认的,META-INF/spring.schemas
 		this.schemaMappingsLocation = DEFAULT_SCHEMA_MAPPINGS_LOCATION;
 	}
 
@@ -116,8 +120,10 @@ public class PluggableSchemaResolver implements EntityResolver {
 			String resourceLocation = getSchemaMappings().get(systemId);
 			if (resourceLocation == null && systemId.startsWith("https:")) {
 				// Retrieve canonical http schema mapping even for https declaration
+				//https和http的转化
 				resourceLocation = getSchemaMappings().get("http:" + systemId.substring(6));
 			}
+			//resourceLocation 并非网页http地址,而是和网页地址对应的.xsd文件的路径
 			if (resourceLocation != null) {
 				Resource resource = new ClassPathResource(resourceLocation, this.classLoader);
 				try {
@@ -154,6 +160,8 @@ public class PluggableSchemaResolver implements EntityResolver {
 						logger.trace("Loading schema mappings from [" + this.schemaMappingsLocation + "]");
 					}
 					try {
+						//核心方法,如果schemaMappings 是null的话,加载this.schemaMappingsLocation
+						//默认是META-INFO下的spring.schemas
 						Properties mappings =
 								PropertiesLoaderUtils.loadAllProperties(this.schemaMappingsLocation, this.classLoader);
 						if (logger.isTraceEnabled()) {

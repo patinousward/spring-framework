@@ -124,7 +124,7 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	@Nullable
 	private NamespaceHandlerResolver namespaceHandlerResolver;
 
-	private DocumentLoader documentLoader = new DefaultDocumentLoader();
+	private DocumentLoader documentLoader = new DefaultDocumentLoader();//默认documentLoader
 
 	@Nullable
 	private EntityResolver entityResolver;
@@ -264,13 +264,19 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	 * if none specified.
 	 */
 	protected EntityResolver getEntityResolver() {
+		//默认EntityResolver(java的类)是从网站上下载DTD验证,但是这里可能是封装了这个文件
+		// 比如放在META-INF/spring.schemas下(在idea中全局搜索即可找到(就在本模块的resources下面))
+		//这个文件记录了url和文件的对应关系,也可以在全局中搜出.dtd文件和.xsd文件
+		//key =网站地址 value 是这个.xsd文件在jar包中的地址
 		if (this.entityResolver == null) {
 			// Determine default EntityResolver to use.
 			ResourceLoader resourceLoader = getResourceLoader();
 			if (resourceLoader != null) {
+				//ResourceEntityResolver是DelegatingEntityResolver的子类
 				this.entityResolver = new ResourceEntityResolver(resourceLoader);
 			}
 			else {
+				//该 Resolver 委托给默认的 BeansDtdResolver 和 PluggableSchemaResolver 。
 				this.entityResolver = new DelegatingEntityResolver(getBeanClassLoader());
 			}
 		}
@@ -447,6 +453,8 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	protected Document doLoadDocument(InputSource inputSource, Resource resource) throws Exception {
 		return this.documentLoader.loadDocument(inputSource, getEntityResolver(), this.errorHandler,
 				//获取指定资源（xml）的验证模式。getValidationModeForResource--XML 文件的验证模式保证了 XML 文件的正确性。
+				//isNamespaceAware() 默认是false,命名空间支持。如果要提供对 XML 名称空间的支持，则需要值为 true
+				//this.errorHandler = SimpleSaxErrorHandler
 				getValidationModeForResource(resource), isNamespaceAware());
 	}
 
