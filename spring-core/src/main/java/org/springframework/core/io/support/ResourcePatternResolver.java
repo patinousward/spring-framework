@@ -51,6 +51,7 @@ import org.springframework.core.io.ResourceLoader;
  * @see org.springframework.context.ApplicationContext
  * @see org.springframework.context.ResourceLoaderAware
  */
+//和DefaultResourceLoader的区别是可以返回多个资源,classpath*
 public interface ResourcePatternResolver extends ResourceLoader {
 
 	/**

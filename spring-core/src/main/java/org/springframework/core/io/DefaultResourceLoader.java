@@ -50,6 +50,8 @@ public class DefaultResourceLoader implements ResourceLoader {
 	@Nullable
 	private ClassLoader classLoader;
 
+	//有了 ProtocolResolver 后，我们不需要直接继承 DefaultResourceLoader
+	// 改为实现 ProtocolResolver 接口也可以实现自定义的 ResourceLoader。
 	private final Set<ProtocolResolver> protocolResolvers = new LinkedHashSet<>(4);
 
 	private final Map<Class<?>, Map<Resource, ?>> resourceCaches = new ConcurrentHashMap<>(4);
@@ -62,6 +64,10 @@ public class DefaultResourceLoader implements ResourceLoader {
 	 * @see java.lang.Thread#getContextClassLoader()
 	 */
 	public DefaultResourceLoader() {
+		//优先级顺序
+		//Thread.currentThread().getContextClassLoader()
+		//ClassUtils.class.getClassLoader()
+		//ClassLoader.getSystemClassLoader()
 		this.classLoader = ClassUtils.getDefaultClassLoader();
 	}
 
@@ -145,20 +151,24 @@ public class DefaultResourceLoader implements ResourceLoader {
 		Assert.notNull(location, "Location must not be null");
 
 		for (ProtocolResolver protocolResolver : this.protocolResolvers) {
+			//解析Resource的主要方法
 			Resource resource = protocolResolver.resolve(location, this);
 			if (resource != null) {
 				return resource;
 			}
 		}
-
+		//以 / 开头，返回 ClassPathContextResource 类型的资源
 		if (location.startsWith("/")) {
 			return getResourceByPath(location);
 		}
+		//以 classpath: 开头，返回 ClassPathResource 类型的资源
 		else if (location.startsWith(CLASSPATH_URL_PREFIX)) {
+			//ClassPathResource 并非是ContextResource的实现类
 			return new ClassPathResource(location.substring(CLASSPATH_URL_PREFIX.length()), getClassLoader());
 		}
 		else {
 			try {
+				//最后尝试将location作为url进行解析
 				// Try to parse the location as a URL...
 				URL url = new URL(location);
 				return (ResourceUtils.isFileURL(url) ? new FileUrlResource(url) : new UrlResource(url));
