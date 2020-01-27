@@ -203,6 +203,8 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 			importBeanDefinitionResource(ele);
 		}
 		//解析alias元素/标签<beans><alias></alias></beans>
+		//只是注册标签中name（名字）和alias（别名）之间的关系
+		//<alias name="resourceHolder" alias="resourceHolder1"/> name应该就是bean标签中的id属性吧。。
 		else if (delegate.nodeNameEquals(ele, ALIAS_ELEMENT)) {
 			processAliasRegistration(ele);
 		}
@@ -318,12 +320,16 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 		}
 		if (valid) {
 			try {
+				//核心方法，主要是注册别名和名字之间的关系
+				//registerAlias：应该是SimpleAliasRegistry中的，因为芋道源码中传入的是DefaultListableBeanFactory 这个类，而这个
+				//类实现了SimpleAliasRegistry
 				getReaderContext().getRegistry().registerAlias(name, alias);
 			}
 			catch (Exception ex) {
 				getReaderContext().error("Failed to register alias '" + alias +
 						"' for bean with name '" + name + "'", ele, ex);
 			}
+			//推动listener
 			getReaderContext().fireAliasRegistered(name, alias, extractSource(ele));
 		}
 	}
