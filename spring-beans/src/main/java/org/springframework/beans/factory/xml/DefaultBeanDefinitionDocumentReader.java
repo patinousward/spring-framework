@@ -222,6 +222,9 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 	 * from the given resource into the bean factory.
 	 */
 	protected void importBeanDefinitionResource(Element ele) {
+		//获取标签中的resource属性
+		//import 是单标签的，例如：<import resource="spring-student.xml"/>
+		//<import resource="spring-student-dtd.xml"/>
 		String location = ele.getAttribute(RESOURCE_ATTRIBUTE);
 		if (!StringUtils.hasText(location)) {
 			getReaderContext().error("Resource location must not be empty", ele);
@@ -229,6 +232,7 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 		}
 
 		// Resolve system properties: e.g. "${user.dir}"
+		//解析一些系统的属性，比如${user.dir}
 		location = getReaderContext().getEnvironment().resolveRequiredPlaceholders(location);
 
 		Set<Resource> actualResources = new LinkedHashSet<>(4);
@@ -236,6 +240,7 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 		// Discover whether the location is an absolute or relative URI
 		boolean absoluteLocation = false;
 		try {
+			//是否是绝对路径
 			absoluteLocation = ResourcePatternUtils.isUrl(location) || ResourceUtils.toURI(location).isAbsolute();
 		}
 		catch (URISyntaxException ex) {
@@ -245,7 +250,11 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 
 		// Absolute or relative?
 		if (absoluteLocation) {
+			//绝对路径
 			try {
+				//loadBeanDefinitions：
+				//1.location中解析出的resource会被添加到actualResources中
+				//2.这里其实也是个递归，会将import应用的xml再进行解析和加载，返回引入import的Count
 				int importCount = getReaderContext().getReader().loadBeanDefinitions(location, actualResources);
 				if (logger.isTraceEnabled()) {
 					logger.trace("Imported " + importCount + " bean definitions from URL location [" + location + "]");
@@ -262,10 +271,14 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 				int importCount;
 				Resource relativeResource = getReaderContext().getResource().createRelative(location);
 				if (relativeResource.exists()) {
+					//存在的话，递归，解析import的xml，返回importCount
 					importCount = getReaderContext().getReader().loadBeanDefinitions(relativeResource);
+					//添加到set集合中
 					actualResources.add(relativeResource);
 				}
 				else {
+					//不存在的话，加入baseLocation再尝试进行加载。。但是逻辑应该也是一样的，都是找到import资源，进行递归加载
+					//baseLocation 获取根路径
 					String baseLocation = getReaderContext().getResource().getURL().toString();
 					importCount = getReaderContext().getReader().loadBeanDefinitions(
 							StringUtils.applyRelativePath(baseLocation, location), actualResources);
@@ -282,7 +295,9 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 						"Failed to import bean definitions from relative location [" + location + "]", ele, ex);
 			}
 		}
+		//转array
 		Resource[] actResArray = actualResources.toArray(new Resource[0]);
+		//激活监听器，推送一些信息吧
 		getReaderContext().fireImportProcessed(location, actResArray, extractSource(ele));
 	}
 

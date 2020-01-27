@@ -90,6 +90,8 @@ public abstract class AbstractBeanDefinitionReader implements BeanDefinitionRead
 			this.resourceLoader = (ResourceLoader) this.registry;
 		}
 		else {
+			//芋道源码中走的应该是这个分支，DefaultListableBeanFactory既非ResourceLoader的子类，也非EnvironmentCapable的子类
+			//resourceLoader应该是PathMatchingResourcePatternResolver，它封装了DefaultResourceLoader
 			this.resourceLoader = new PathMatchingResourcePatternResolver();
 		}
 
@@ -98,6 +100,8 @@ public abstract class AbstractBeanDefinitionReader implements BeanDefinitionRead
 			this.environment = ((EnvironmentCapable) this.registry).getEnvironment();
 		}
 		else {
+			//芋道源码中走的应该是这个分支，理由同上
+			//所以获取的环境应该是StandardEnvironment
 			this.environment = new StandardEnvironment();
 		}
 	}
