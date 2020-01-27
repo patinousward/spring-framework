@@ -143,6 +143,8 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	 * in the form of a BeanDefinitionRegistry
 	 */
 	public XmlBeanDefinitionReader(BeanDefinitionRegistry registry) {
+		//DefaultListableBeanFactory  在芋道源码案例中，这里registry注入的是DefaultListableBeanFactory
+		// 他实现了BeanDefinitionRegistry 接口，对registry进行赋值
 		super(registry);
 	}
 
@@ -536,8 +538,12 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	 * @see BeanDefinitionDocumentReader#registerBeanDefinitions
 	 */
 	public int registerBeanDefinitions(Document doc, Resource resource) throws BeanDefinitionStoreException {
+		//创建documentReader：DefaultBeanDefinitionDocumentReader 反射创建
 		BeanDefinitionDocumentReader documentReader = createBeanDefinitionDocumentReader();
+		//beanDefinitionMap集合中元素的数量Map<String, BeanDefinition>  一开始默认0
 		int countBefore = getRegistry().getBeanDefinitionCount();
+		//核心方法，注册 后应该会添加进入beanDefinitionMap 这个集合中
+		//createReaderContext ---> XmlReaderContext
 		documentReader.registerBeanDefinitions(doc, createReaderContext(resource));
 		return getRegistry().getBeanDefinitionCount() - countBefore;
 	}
@@ -556,6 +562,13 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	 * Create the {@link XmlReaderContext} to pass over to the document reader.
 	 */
 	public XmlReaderContext createReaderContext(Resource resource) {
+		//	private ProblemReporter problemReporter = new FailFastProblemReporter(); reporter的默认值
+		//
+		//	private ReaderEventListener eventListener = new EmptyReaderEventListener(); listener的默认值
+		//
+		//	private SourceExtractor sourceExtractor = new NullSourceExtractor(); sourceExtractor的默认值
+
+		//返回XmlReaderContext 对象
 		return new XmlReaderContext(resource, this.problemReporter, this.eventListener,
 				this.sourceExtractor, this, getNamespaceHandlerResolver());
 	}

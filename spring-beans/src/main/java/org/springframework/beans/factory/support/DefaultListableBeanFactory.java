@@ -448,6 +448,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 
 	@Override
 	public int getBeanDefinitionCount() {
+		//Map<String, BeanDefinition> beanDefinitionMap集合中元素的数量
 		return this.beanDefinitionMap.size();
 	}
 
