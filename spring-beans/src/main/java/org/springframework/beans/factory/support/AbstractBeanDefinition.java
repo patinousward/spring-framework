@@ -1096,6 +1096,8 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	 * @throws BeanDefinitionValidationException in case of validation failure
 	 */
 	public void validate() throws BeanDefinitionValidationException {
+		//methodOverrides 和factoryMethodName 不能同时存在
+		//https://blog.csdn.net/qq_33188563/article/details/82865165 factory-method (bean中的属性)
 		if (hasMethodOverrides() && getFactoryMethodName() != null) {
 			throw new BeanDefinitionValidationException(
 					"Cannot combine static factory method with method overrides: " +
@@ -1103,6 +1105,7 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 		}
 
 		if (hasBeanClass()) {
+			//如果是factory-method这种。可以忽略这个方法体，这个方法是针对methodOverrides 的
 			prepareMethodOverrides();
 		}
 	}
@@ -1115,9 +1118,11 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	public void prepareMethodOverrides() throws BeanDefinitionValidationException {
 		// Check that lookup methods exists.
 		if (hasMethodOverrides()) {
+			//有方法要重写，具体是拥有lookup-method标签和replace-method标签
 			Set<MethodOverride> overrides = getMethodOverrides().getOverrides();
 			synchronized (overrides) {
 				for (MethodOverride mo : overrides) {
+					//核心方法
 					prepareMethodOverride(mo);
 				}
 			}
@@ -1132,12 +1137,15 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	 * @throws BeanDefinitionValidationException in case of validation failure
 	 */
 	protected void prepareMethodOverride(MethodOverride mo) throws BeanDefinitionValidationException {
+		//在这个类中，获取这个方法名的数量
 		int count = ClassUtils.getMethodCountForName(getBeanClass(), mo.getMethodName());
 		if (count == 0) {
+			//表示这个类中没有这个方法
 			throw new BeanDefinitionValidationException(
 					"Invalid method override: no method with name '" + mo.getMethodName() +
 					"' on class [" + getBeanClassName() + "]");
 		}
+		//只有一个表示这个方法没有重载
 		else if (count == 1) {
 			// Mark override as not overloaded, to avoid the overhead of arg type checking.
 			mo.setOverloaded(false);

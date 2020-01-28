@@ -912,6 +912,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 
 		if (beanDefinition instanceof AbstractBeanDefinition) {
 			try {
+				//主要是bean标签中重写方法（lookup-method子标签，replace-method子标签 ）和factory-method属性不能同时存在
 				((AbstractBeanDefinition) beanDefinition).validate();
 			}
 			catch (BeanDefinitionValidationException ex) {
@@ -919,12 +920,14 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 						"Validation of bean definition failed", ex);
 			}
 		}
-
+		//beanDefinitionMap  中是否已经存在这个beanName
 		BeanDefinition existingDefinition = this.beanDefinitionMap.get(beanName);
 		if (existingDefinition != null) {
-			if (!isAllowBeanDefinitionOverriding()) {
+			if (!isAllowBeanDefinitionOverriding()) { //isAllowBeanDefinitionOverriding() 默认是true
+				//如果不允许beanDefinition重写的话，直接抛出异常
 				throw new BeanDefinitionOverrideException(beanName, beanDefinition, existingDefinition);
 			}
+			//role = BeanDefinition.ROLE_APPLICATION 默认值
 			else if (existingDefinition.getRole() < beanDefinition.getRole()) {
 				// e.g. was ROLE_APPLICATION, now overriding with ROLE_SUPPORT or ROLE_INFRASTRUCTURE
 				if (logger.isInfoEnabled()) {
@@ -947,13 +950,17 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 							"] with [" + beanDefinition + "]");
 				}
 			}
+			//替换掉已经存在的
 			this.beanDefinitionMap.put(beanName, beanDefinition);
 		}
 		else {
 			if (hasBeanCreationStarted()) {
 				// Cannot modify startup-time collection elements anymore (for stable iteration)
+				//如果this.alreadyCreated 集合不为空，则需要加锁
 				synchronized (this.beanDefinitionMap) {
+					//添加
 					this.beanDefinitionMap.put(beanName, beanDefinition);
+					//更新this.beanDefinitionNames集合
 					List<String> updatedDefinitions = new ArrayList<>(this.beanDefinitionNames.size() + 1);
 					updatedDefinitions.addAll(this.beanDefinitionNames);
 					updatedDefinitions.add(beanName);
@@ -963,10 +970,12 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			}
 			else {
 				// Still in startup registration phase
+				//如果this.alreadyCreated 集合还是空的话，直接添加，不用加锁
 				this.beanDefinitionMap.put(beanName, beanDefinition);
 				this.beanDefinitionNames.add(beanName);
 				removeManualSingletonName(beanName);
 			}
+			//冻结的BeanDefinitionNames设置回null
 			this.frozenBeanDefinitionNames = null;
 		}
 
@@ -1072,6 +1081,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	}
 
 	private void removeManualSingletonName(String beanName) {
+		//beanName，当前准备注册的beanName
 		updateManualSingletonNames(set -> set.remove(beanName), set -> set.contains(beanName));
 	}
 
@@ -1082,6 +1092,8 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	 * (if this condition does not apply, the action can be skipped)
 	 */
 	private void updateManualSingletonNames(Consumer<Set<String>> action, Predicate<Set<String>> condition) {
+		//this.manualSingletonNames 集合中是否有这个beanName 有就移除
+		//action 移除  predicate： set是否包含这个元素
 		if (hasBeanCreationStarted()) {
 			// Cannot modify startup-time collection elements anymore (for stable iteration)
 			synchronized (this.beanDefinitionMap) {

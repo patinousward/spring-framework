@@ -51,6 +51,7 @@ public class SimpleAliasRegistry implements AliasRegistry {
 	public void registerAlias(String name, String alias) {
 		Assert.hasText(name, "'name' must not be empty");
 		Assert.hasText(alias, "'alias' must not be empty");
+		//alia 和name相同，则移除aliasMap中。具体看debu信息
 		synchronized (this.aliasMap) {
 			if (alias.equals(name)) {
 				this.aliasMap.remove(alias);
@@ -59,13 +60,17 @@ public class SimpleAliasRegistry implements AliasRegistry {
 				}
 			}
 			else {
+				//通过alias，获取已经存在的name
 				String registeredName = this.aliasMap.get(alias);
 				if (registeredName != null) {
+					//如果已经存在，则直接返回
 					if (registeredName.equals(name)) {
 						// An existing alias - no need to re-register
 						return;
 					}
+					//allowAliasOverriding() 默认值为true
 					if (!allowAliasOverriding()) {
+						//不允许覆写则抛出异常
 						throw new IllegalStateException("Cannot define alias '" + alias + "' for name '" +
 								name + "': It is already registered for name '" + registeredName + "'.");
 					}
@@ -74,7 +79,9 @@ public class SimpleAliasRegistry implements AliasRegistry {
 								registeredName + "' with new target name '" + name + "'");
 					}
 				}
+				//检测别名循环，比如this.aliasMap 中A-->B，B -->C，C -->A这种
 				checkForAliasCircle(name, alias);
+				//核心方法，放入aliasmap中
 				this.aliasMap.put(alias, name);
 				if (logger.isTraceEnabled()) {
 					logger.trace("Alias definition '" + alias + "' registered for name '" + name + "'");

@@ -345,7 +345,7 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 		BeanDefinitionHolder bdHolder = delegate.parseBeanDefinitionElement(ele);
 		//bdHolder不为null，就 处理自定义子标签和自定义属性
 		if (bdHolder != null) {
-			//进行自定义子标签和自定义属性处理？？parseCustomElement
+			//进行自定义子标签和自定义属性处理，parseCustomElement
 			bdHolder = delegate.decorateBeanDefinitionIfRequired(ele, bdHolder);
 			try {
 				// Register the final decorated instance.
