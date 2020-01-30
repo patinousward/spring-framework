@@ -1001,6 +1001,7 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	 * not defined by the application itself.
 	 */
 	public boolean isSynthetic() {
+		//默认false
 		return this.synthetic;
 	}
 
