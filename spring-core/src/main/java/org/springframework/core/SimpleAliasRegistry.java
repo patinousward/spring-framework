@@ -213,7 +213,7 @@ public class SimpleAliasRegistry implements AliasRegistry {
 		}
 	}
 
-	/**
+	/**确定原始名称，将别名解析为规范名称。
 	 * Determine the raw name, resolving aliases to canonical names.
 	 * @param name the user-specified name
 	 * @return the transformed name
@@ -223,6 +223,9 @@ public class SimpleAliasRegistry implements AliasRegistry {
 		// Handle aliasing...
 		String resolvedName;
 		do {
+			//这个aliasMap就是解析xml的时候生成的别名和beanName的集合
+			//如果name 是beanName，则这里直接返回null，退出循环
+			//如果name是alas 则获取对应的beanName后返回beanName
 			resolvedName = this.aliasMap.get(canonicalName);
 			if (resolvedName != null) {
 				canonicalName = resolvedName;

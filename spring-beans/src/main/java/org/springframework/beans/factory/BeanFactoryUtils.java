@@ -80,9 +80,14 @@ public abstract class BeanFactoryUtils {
 	 */
 	public static String transformedBeanName(String name) {
 		Assert.notNull(name, "'name' must not be null");
+		//如果没有以&开头，则直接返回name
+		//https://www.jianshu.com/p/d37737e823dc
+		//factoryBean
 		if (!name.startsWith(BeanFactory.FACTORY_BEAN_PREFIX)) {
 			return name;
 		}
+		//computeIfAbsent https://blog.csdn.net/weixin_38229356/article/details/81129320
+		//若key对应的value为空，会将第二个参数的返回值存入并返回
 		return transformedBeanNameCache.computeIfAbsent(name, beanName -> {
 			do {
 				beanName = beanName.substring(BeanFactory.FACTORY_BEAN_PREFIX.length());
