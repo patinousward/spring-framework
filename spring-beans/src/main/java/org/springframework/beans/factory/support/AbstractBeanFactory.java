@@ -303,6 +303,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			//<5> 如果不是仅仅做类型检查则是创建bean，这里需要记录
 			//typeCheckOnly 这里参数传的是false
 			if (!typeCheckOnly) {
+				//标记bean开始创建，这时候如果还需要解析xml生成beandefinition的话，在解析添加beanDefinition集合的话就要加锁了
 				markBeanAsCreated(beanName);
 			}
 
@@ -1492,6 +1493,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 		try {
 			if (mbd.hasBeanClass()) {
+				//核心方法，就是获取beanDefinition的class
 				return mbd.getBeanClass();
 			}
 			if (System.getSecurityManager() != null) {
@@ -1841,7 +1843,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		Object object = null;
 		//若 BeanDefinition 为 null，则从缓存中加载 Bean 对象
 		if (mbd == null) {
-			//this.factoryBeanObjectCache 集合缓存中获取这个factoryBean
+			//this.factoryBeanObjectCache 集合缓存中获取这个bean
+			////存放的应该是beanname（factorybean的） 和getObject 创建bean之间的关系的map
 			object = getCachedObjectForFactoryBean(beanName);
 		}
 		// 若 object 依然为空，则可以确认，beanInstance 一定是 FactoryBean 。从而，使用 FactoryBean 获得 Bean 对象

@@ -52,6 +52,7 @@ import org.springframework.util.ClassUtils;
 abstract class AutowireUtils {
 
 	private static final Comparator<Executable> EXECUTABLE_COMPARATOR = (e1, e2) -> {
+		//public升序，private降序
 		int result = Boolean.compare(Modifier.isPublic(e2.getModifiers()), Modifier.isPublic(e1.getModifiers()));
 		return result != 0 ? result : Integer.compare(e2.getParameterCount(), e1.getParameterCount());
 	};
@@ -76,6 +77,7 @@ abstract class AutowireUtils {
 	 * @param factoryMethods the factory method array to sort
 	 */
 	public static void sortFactoryMethods(Method[] factoryMethods) {
+		//排序方式再EXECUTABLE_COMPARATOR
 		Arrays.sort(factoryMethods, EXECUTABLE_COMPARATOR);
 	}
 

@@ -77,6 +77,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * 存放的是单例 bean 的映射。
 	 *
 	 * 对应关系为 bean name --> bean instance
+	 * 所以对于某个类继承了BeanFacotory，这里存放的是这个类的单例，而这个类所创建的bean在另外一个map中
 	 */
 	private final Map<String, Object> singletonObjects = new ConcurrentHashMap<>(256);
 
@@ -130,9 +131,11 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	private final Map<String, Set<String>> containedBeanMap = new ConcurrentHashMap<>(16);
 
 	/** Map between dependent bean names: bean name to Set of dependent bean names. */
+	//bean 和它依赖bean的集合
 	private final Map<String, Set<String>> dependentBeanMap = new ConcurrentHashMap<>(64);
 
 	/** Map between depending bean names: bean name to Set of bean names for the bean's dependencies. */
+	//bean和需要依赖它的bean的集合
 	private final Map<String, Set<String>> dependenciesForBeanMap = new ConcurrentHashMap<>(64);
 
 
@@ -199,7 +202,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * @return the registered singleton object, or {@code null} if none found
 	 */
 	@Nullable
-	protected Object getSingleton(String beanName, boolean allowEarlyReference) {
+	protected Object getSingleton(String beanName, boolean allowEarlyReference) {//allowEarlyReference 允许提早引用
 		Object singletonObject = this.singletonObjects.get(beanName);
 		// 缓存中的 bean 为空，且当前 bean 正在创建
 		//isSingletonCurrentlyInCreation: beforeSingletonCreation方法会将 this.singletonsCurrentlyInCreation 加入进去，默认是空
@@ -247,7 +250,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 				if (logger.isDebugEnabled()) {
 					logger.debug("Creating shared instance of singleton bean '" + beanName + "'");
 				}
-				//标记这个bean真正创建中
+				//标记这个bean正在创建中
 				beforeSingletonCreation(beanName);
 				boolean newSingleton = false;
 				boolean recordSuppressedExceptions = (this.suppressedExceptions == null);

@@ -81,6 +81,7 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 	 */
 	@Nullable
 	protected Object getCachedObjectForFactoryBean(String beanName) {
+		//存放的应该是beanname（factorybean的） 和getObject 创建bean之间的关系的map
 		return this.factoryBeanObjectCache.get(beanName);
 	}
 
