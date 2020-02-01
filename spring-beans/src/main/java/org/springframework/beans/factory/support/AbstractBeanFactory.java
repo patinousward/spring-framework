@@ -326,6 +326,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 						//isDependent 可看测试案例（testDependentRegistration()）
 						// 主要是判断，beanName是否依赖于dep，开始集合为空，判断是false，随着registerDependentBean的调用
 						//如果上面isDependent判断为true，说明有循环依赖，抛出异常
+						//------------------这里的循环依赖指的是depend-on标签有循环，比如A 中标签有depend-on B ,B中有C，C中有A，那么就会抛出异常
+						//-------------重要：depend-on标签的意义在于指定某个bean先创建，和注入属性毫无关系
 						if (isDependent(beanName, dep)) {
 							throw new BeanCreationException(mbd.getResourceDescription(), beanName,
 									"Circular depends-on relationship between '" + beanName + "' and '" + dep + "'");
