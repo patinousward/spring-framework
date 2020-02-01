@@ -596,6 +596,8 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	 */
 	public int getResolvedAutowireMode() {
 		//默认值是AUTOWIRE_NO
+		//由bean标签中autowire 属性控制
+		//https://blog.csdn.net/xiaolicd/article/details/90755559
 		if (this.autowireMode == AUTOWIRE_AUTODETECT) { //如果是自动注入的话
 			// Work out whether to apply setter autowiring or constructor autowiring.
 			// If it has a no-arg constructor it's deemed to be setter autowiring,

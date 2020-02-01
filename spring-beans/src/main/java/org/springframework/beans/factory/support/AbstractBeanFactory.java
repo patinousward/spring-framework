@@ -315,12 +315,17 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 				// Guarantee initialization of beans that the current bean depends on.
 				//<7> 处理所依赖的 bean  依赖应该是在解析xml的时候进行添加进去的
+				//是解析depends-on 标签得到的:
+				//https://www.cnblogs.com/zhishan/p/3190771.html
 				String[] dependsOn = mbd.getDependsOn();
 				if (dependsOn != null) {
 					for (String dep : dependsOn) {
 						// 若给定的依赖 bean 已经注册为依赖给定的 bean
 						// 即循环依赖的情况，抛出 BeanCreationException 异常
 						//♠--------isDependent 并不是一次性判断出全部循环依赖的情况，而是随着递归调用，然后判断this.dependentBeanMap 中有无存在的情况 -------
+						//isDependent 可看测试案例（testDependentRegistration()）
+						// 主要是判断，beanName是否依赖于dep，开始集合为空，判断是false，随着registerDependentBean的调用
+						//如果上面isDependent判断为true，说明有循环依赖，抛出异常
 						if (isDependent(beanName, dep)) {
 							throw new BeanCreationException(mbd.getResourceDescription(), beanName,
 									"Circular depends-on relationship between '" + beanName + "' and '" + dep + "'");
@@ -434,10 +439,12 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	@Override
 	public boolean containsBean(String name) {
 		String beanName = transformedBeanName(name);
+		//beanDefinitionMap中有值或者单例singleObjects 中就有值
 		if (containsSingleton(beanName) || containsBeanDefinition(beanName)) {
+			//返回是否是一个factorybean，或者name 非&开头
 			return (!BeanFactoryUtils.isFactoryDereference(name) || isFactoryBean(name));
 		}
-		// Not found -> check parent.
+		// Not found -> check parent.目前beanFactory中没找到就去父类中寻找
 		BeanFactory parentBeanFactory = getParentBeanFactory();
 		return (parentBeanFactory != null && parentBeanFactory.containsBean(originalBeanName(name)));
 	}

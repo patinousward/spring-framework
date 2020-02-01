@@ -808,12 +808,17 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 	 */
 	@SuppressWarnings("unchecked")  // avoid nested generic
 	protected AbstractNestablePropertyAccessor getPropertyAccessorForPropertyPath(String propertyPath) {
+		//PropertyAccessorUtilsTests 这个方法可以去看下这个测试类
+		//propertyPath 格式有可能由[User] 表示数组，或者user.address.street 表示有嵌套属性
+		//post是最后一个.的index位置
 		int pos = PropertyAccessorUtils.getFirstNestedPropertySeparatorIndex(propertyPath);
 		// Handle nested properties recursively.
 		if (pos > -1) {
-			String nestedProperty = propertyPath.substring(0, pos);
-			String nestedPath = propertyPath.substring(pos + 1);
+			String nestedProperty = propertyPath.substring(0, pos); //比如这里获取到user
+			String nestedPath = propertyPath.substring(pos + 1);//比如这里会获取到address.street
 			AbstractNestablePropertyAccessor nestedPa = getNestedPropertyAccessor(nestedProperty);
+			//递归，最终获取到 到steet进行return
+			// user.(address.street)
 			return nestedPa.getPropertyAccessorForPropertyPath(nestedPath);
 		}
 		else {
