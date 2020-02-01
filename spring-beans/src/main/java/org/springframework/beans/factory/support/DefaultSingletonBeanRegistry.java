@@ -161,9 +161,9 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 */
 	protected void addSingleton(String beanName, Object singletonObject) {
 		synchronized (this.singletonObjects) {
-			this.singletonObjects.put(beanName, singletonObject);
-			this.singletonFactories.remove(beanName);
-			this.earlySingletonObjects.remove(beanName);
+			this.singletonObjects.put(beanName, singletonObject);//一级缓存 添加
+			this.singletonFactories.remove(beanName);//三级缓存 移除
+			this.earlySingletonObjects.remove(beanName);//二级缓存 移除
 			this.registeredSingletons.add(beanName);
 		}
 	}
@@ -180,8 +180,8 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 		Assert.notNull(singletonFactory, "Singleton factory must not be null");
 		synchronized (this.singletonObjects) {
 			if (!this.singletonObjects.containsKey(beanName)) {
-				this.singletonFactories.put(beanName, singletonFactory);
-				this.earlySingletonObjects.remove(beanName);
+				this.singletonFactories.put(beanName, singletonFactory);//三级缓存添加
+				this.earlySingletonObjects.remove(beanName);//二级缓存移除
 				this.registeredSingletons.add(beanName);
 			}
 		}
@@ -251,6 +251,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					logger.debug("Creating shared instance of singleton bean '" + beanName + "'");
 				}
 				//标记这个bean正在创建中
+				// 这里会对循环依赖进行检查，防止A-B-C-A无限循环，如果构造器循环依赖，那么这里将抛出异常
 				beforeSingletonCreation(beanName);
 				boolean newSingleton = false;
 				boolean recordSuppressedExceptions = (this.suppressedExceptions == null);
@@ -286,9 +287,9 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					afterSingletonCreation(beanName);
 				}
 				//如果创建成功，添加singleTonBean的缓存
-				//this.singletonObjects.put(beanName, singletonObject);------添加进入缓存
-				//			this.singletonFactories.remove(beanName);  -----singletonFactories 移除
-				//			this.earlySingletonObjects.remove(beanName);-----earlySingletonObjects 移除
+				//this.singletonObjects.put(beanName, singletonObject);------添加进入缓存 一级缓存
+				//			this.singletonFactories.remove(beanName);  -----singletonFactories 移除 三级缓存中移除
+				//			this.earlySingletonObjects.remove(beanName);-----earlySingletonObjects 移除 二级缓存中移除
 				//			this.registeredSingletons.add(beanName);---------registeredSingletons 添加
 				if (newSingleton) {
 					//AbstractAutowireCapableBeanFactory 中 上singletonFactories和earlySingletonObjects 都有添加，所以要在这里移除下
@@ -385,6 +386,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 		//!this.inCreationCheckExclusions.contains(beanName) 在一开始应该是为true的
 		//singletonsCurrentlyInCreation 添加，如果有重复的，添加为false，直接返回报错
 		if (!this.inCreationCheckExclusions.contains(beanName) && !this.singletonsCurrentlyInCreation.add(beanName)) {
+			//重复说明有构造器循环依赖，将在这里抛出异常
 			throw new BeanCurrentlyInCreationException(beanName);
 		}
 	}
