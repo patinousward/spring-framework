@@ -53,6 +53,7 @@ import org.springframework.util.StringValueResolver;
  * instead which is more flexible through taking advantage of the {@link org.springframework.core.env.Environment}
  * and {@link org.springframework.core.env.PropertySource} mechanisms.
  */
+//但是快要废弃了，PropertyPlaceholderConfigurer 允许我们在 XML 配置文件中使用占位符并将这些占位符所代表的资源单独配置到简单的 properties 文件中来加载
 @Deprecated
 public class PropertyPlaceholderConfigurer extends PlaceholderConfigurerSupport {
 
@@ -206,8 +207,9 @@ public class PropertyPlaceholderConfigurer extends PlaceholderConfigurerSupport 
 	@Override
 	protected void processProperties(ConfigurableListableBeanFactory beanFactoryToProcess, Properties props)
 			throws BeansException {
-
+		//封装
 		StringValueResolver valueResolver = new PlaceholderResolvingStringValueResolver(props);
+		//核心方法
 		doProcessProperties(beanFactoryToProcess, valueResolver);
 	}
 
