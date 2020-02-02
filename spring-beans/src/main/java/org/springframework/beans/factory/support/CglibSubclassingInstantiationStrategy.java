@@ -154,7 +154,10 @@ public class CglibSubclassingInstantiationStrategy extends SimpleInstantiationSt
 				ClassLoader cl = ((ConfigurableBeanFactory) this.owner).getBeanClassLoader();
 				enhancer.setStrategy(new ClassLoaderAwareGeneratorStrategy(cl));
 			}
+			//设置回调过滤器，look-up 属性和replace-method属性
+			//https://www.jianshu.com/p/199c74e4dd46--look-up的使用，配合prototype的scope
 			enhancer.setCallbackFilter(new MethodOverrideCallbackFilter(beanDefinition));
+			//设置拦截器数组
 			enhancer.setCallbackTypes(CALLBACK_TYPES);
 			return enhancer.createClass();
 		}
@@ -249,20 +252,22 @@ public class CglibSubclassingInstantiationStrategy extends SimpleInstantiationSt
 			super(beanDefinition);
 		}
 
+		//核心，过滤器被调用的方法
 		@Override
 		public int accept(Method method) {
+			//获取方法的重写
 			MethodOverride methodOverride = getBeanDefinition().getMethodOverrides().getOverride(method);
 			if (logger.isTraceEnabled()) {
 				logger.trace("Override for '" + method.getName() + "' is [" + methodOverride + "]");
 			}
 			if (methodOverride == null) {
-				return PASSTHROUGH;
+				return PASSTHROUGH; //0
 			}
 			else if (methodOverride instanceof LookupOverride) {
-				return LOOKUP_OVERRIDE;
+				return LOOKUP_OVERRIDE; //1
 			}
 			else if (methodOverride instanceof ReplaceOverride) {
-				return METHOD_REPLACER;
+				return METHOD_REPLACER; //2
 			}
 			throw new UnsupportedOperationException("Unexpected MethodOverride subclass: " +
 					methodOverride.getClass().getName());
@@ -282,7 +287,9 @@ public class CglibSubclassingInstantiationStrategy extends SimpleInstantiationSt
 			super(beanDefinition);
 			this.owner = owner;
 		}
-
+		//核心方法look-up属性指定某个复数的beanName作为返回，那么这个方法会从beanFactory中调用getBean方法作为这个look-upmethod的返回进行返回
+		//指定了look-up的可以是抽象类，因为会生成子类，所以可以初始化
+		//https://www.jianshu.com/p/199c74e4dd46
 		@Override
 		public Object intercept(Object obj, Method method, Object[] args, MethodProxy mp) throws Throwable {
 			// Cast is safe, as CallbackFilter filters are used selectively.
@@ -313,13 +320,17 @@ public class CglibSubclassingInstantiationStrategy extends SimpleInstantiationSt
 			super(beanDefinition);
 			this.owner = owner;
 		}
-
+		//核心方法
+		//<replaced-method name="自身bean需要被替换的方法名" replacer="替换者的beanName，需要实现MethodReplacer 接口"> </replaced-method >
+		//https://www.cnblogs.com/wade-luffy/p/6068415.html
 		@Override
 		public Object intercept(Object obj, Method method, Object[] args, MethodProxy mp) throws Throwable {
 			ReplaceOverride ro = (ReplaceOverride) getBeanDefinition().getMethodOverrides().getOverride(method);
 			Assert.state(ro != null, "ReplaceOverride not found");
 			// TODO could cache if a singleton for minor performance optimization
+			//获取替换bean 这个bean一定是MethodReplacer的子类
 			MethodReplacer mr = this.owner.getBean(ro.getMethodReplacerBeanName(), MethodReplacer.class);
+			//调用MethodReplacer的方法
 			return mr.reimplement(obj, method, args);
 		}
 	}
