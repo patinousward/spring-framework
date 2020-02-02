@@ -587,7 +587,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		synchronized (mbd.postProcessingLock) {
 			if (!mbd.postProcessed) {
 				try {
-					// 后置处理修改 BeanDefinition
+					// 后置处理修改 BeanDefinition（针对注册了MergedBeanDefinitionPostProcessor ，这段代码才能生效）
 					applyMergedBeanDefinitionPostProcessors(mbd, beanType, beanName);
 				}
 				catch (Throwable ex) {
@@ -1450,7 +1450,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		if (!mbd.isSynthetic() && hasInstantiationAwareBeanPostProcessors()) {
 			// 迭代所有的 BeanPostProcessors
 			for (BeanPostProcessor bp : getBeanPostProcessors()) {
-				// 如果为 InstantiationAwareBeanPostProcessor
+				// 如果为 InstantiationAwareBeanPostProcessor，（这段代码针对InstantiationAwareBeanPostProcessor 才生效）
 				if (bp instanceof InstantiationAwareBeanPostProcessor) {
 					InstantiationAwareBeanPostProcessor ibp = (InstantiationAwareBeanPostProcessor) bp;
 					// 返回值为是否继续填充 bean

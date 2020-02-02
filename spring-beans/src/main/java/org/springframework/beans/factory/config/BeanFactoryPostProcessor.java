@@ -43,6 +43,8 @@ import org.springframework.beans.BeansException;
  * @see PropertyResourceConfigurer
  */
 @FunctionalInterface
+//BeanFactoryPostProcessor 的机制，就相当于给了我们在 Bean 实例化之前最后一次修改 BeanDefinition 的机会
+//ApplicationContext  中也是会自动注册xml中配置的BeanFactoryPostProcessor 实例
 public interface BeanFactoryPostProcessor {
 
 	/**
