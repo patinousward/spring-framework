@@ -1356,10 +1356,10 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	//---------------------------------------------------------------------
 	// Implementation of Lifecycle interface
 	//---------------------------------------------------------------------
-
+	//Lifecycle 接口实现
 	@Override
 	public void start() {
-		getLifecycleProcessor().start();
+		getLifecycleProcessor().start(); //委托给LifecycleProcessor 进行实现
 		publishEvent(new ContextStartedEvent(this));
 	}
 
