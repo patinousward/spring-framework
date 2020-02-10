@@ -1,0 +1,19 @@
+事务相关
+
+jdbtemplate
+这个需要在xml中配置进行使用，并且注入datasource
+
+<context:property-placeholder location="classpath:db.properties"/>
+<bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+    <property name="user" value="${jdbc.user}"></property>
+    <property name="password" value="${jdbc.password}"></property>
+    <property name="driverClass" value="${jdbc.driverClass}"></property>
+    <property name="jdbcUrl" value="${jdbc.jdbcUrl}"></property>
+</bean>
+
+<bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+    <property name="dataSource" ref="dataSource"></property>
+</bean>
+
+编程式事务使用方法，springboot：
+https://blog.csdn.net/m0_37606574/article/details/79787614
