@@ -566,6 +566,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 				// Instantiate all remaining (non-lazy-init) singletons.
 				// 初始化剩下的单例Bean(非延迟加载的),延迟的使用才去加载
+				//-----------------------spirng bean 默认单例 非懒加载的，除非xml中声明，或者注解中声明----------------------------------------
+				//https://blog.csdn.net/u013308490/article/details/82768775
 				finishBeanFactoryInitialization(beanFactory);
 
 				// Last step: publish corresponding event.
