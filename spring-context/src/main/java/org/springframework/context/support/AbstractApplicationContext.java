@@ -385,9 +385,11 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		// Decorate event as an ApplicationEvent if necessary
 		ApplicationEvent applicationEvent;
 		if (event instanceof ApplicationEvent) {
+			//是ApplicationEvent 直接强转
 			applicationEvent = (ApplicationEvent) event;
 		}
 		else {
+			//否则包装为PayloadApplicationEvent
 			applicationEvent = new PayloadApplicationEvent<>(this, event);
 			if (eventType == null) {
 				eventType = ((PayloadApplicationEvent<?>) applicationEvent).getResolvableType();
@@ -396,13 +398,15 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 		// Multicast right now if possible - or lazily once the multicaster is initialized
 		if (this.earlyApplicationEvents != null) {
+			//添加至缓存中一般不走这里
 			this.earlyApplicationEvents.add(applicationEvent);
 		}
 		else {
+			//核心方法，ApplicationEventMulticaster 里面有注册的全部的listener，multicastEvent 就是推送event的核心方法
 			getApplicationEventMulticaster().multicastEvent(applicationEvent, eventType);
 		}
 
-		// Publish event via parent context as well...
+		// Publish event via parent context as well... 调用parentContext的pushEvent方法
 		if (this.parent != null) {
 			if (this.parent instanceof AbstractApplicationContext) {
 				((AbstractApplicationContext) this.parent).publishEvent(event, eventType);
@@ -1339,7 +1343,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	//---------------------------------------------------------------------
 	// Implementation of ResourcePatternResolver interface
 	//---------------------------------------------------------------------
-
+	//ResourcePatternResolver 接口实现的地方，其实就是调用this.resourcePatternResolver.getResources 方法
+	//所谓Context就是将所有实现类聚合，再调用实现类的实现方法
 	@Override
 	public Resource[] getResources(String locationPattern) throws IOException {
 		return this.resourcePatternResolver.getResources(locationPattern);
