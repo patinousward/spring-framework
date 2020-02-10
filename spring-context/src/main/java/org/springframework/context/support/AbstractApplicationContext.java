@@ -744,6 +744,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			}
 		}
 		else {
+			//beanFactoy中注册有MESSAGE_SOURCE_BEAN_NAME就从容器中取出，否则自己new一个放入容器中，默认是DelegatingMessageSource
 			// Use empty MessageSource to be able to accept getMessage calls.
 			DelegatingMessageSource dms = new DelegatingMessageSource();
 			dms.setParentMessageSource(getInternalParentMessageSource());
@@ -1293,7 +1294,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 
 	//---------------------------------------------------------------------
-	// Implementation of MessageSource interface
+	// Implementation of MessageSource interface [MessageSource的接口的实现-源码入口]
 	//---------------------------------------------------------------------
 
 	@Override
