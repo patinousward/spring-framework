@@ -119,6 +119,7 @@ public abstract class AbstractApplicationEventMulticaster
 	@Override
 	public void addApplicationListenerBean(String listenerBeanName) {
 		synchronized (this.retrievalMutex) {
+			//只是添加到 applicationListenerBeans 中
 			this.defaultRetriever.applicationListenerBeans.add(listenerBeanName);
 			this.retrieverCache.clear();
 		}
@@ -435,6 +436,7 @@ public abstract class AbstractApplicationEventMulticaster
 				BeanFactory beanFactory = getBeanFactory();
 				for (String listenerBeanName : this.applicationListenerBeans) {
 					try {
+						//核心方法。。实例化
 						ApplicationListener<?> listener = beanFactory.getBean(listenerBeanName, ApplicationListener.class);
 						if (this.preFiltered || !allListeners.contains(listener)) {
 							allListeners.add(listener);
