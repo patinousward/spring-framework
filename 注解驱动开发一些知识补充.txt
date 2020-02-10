@@ -1,0 +1,22 @@
+spring 注解驱动开发的原理：
+
+核心应该都是获取到package-scan，然后使用类加载器去一个个加载，查看类上是否有标注@configuration @component，等等注解
+
+模式1：xml中使用context 然后使用packagescan ，依旧使用classpathXmlApplication 去加载，这样可以使用@compoment和@autowire，应该是解析xml的时候获取到
+扫描包，然后进行类加载
+
+模式2：单元测试，没有xml，也没有package-scan，有@configuration和@bean 等注解，但是需要new 一个AnnotationConfigurationContext，并且放入标注有@configuration的类名
+
+模式3：在模式2的基础上标注@configurationscan，就可以进行包扫描，模式2的缺点是别的类扫不到
+模式4：springboot main方法调用的时候进行
+
+
+@configuration 中@bean 注解标注的方法，方法名是id
+
+@bean注解，导入第三方包的类的注解，比如datasource
+@import 快速导入容器中的一个组件@import（类名） id默认是组件的全类名  限制条件呢，是否需要
+标注到@configuration上呢
+
+@condition应该只能标注在@bean 或者@configuration身上
+
+问题：openfeign和cloud中的configuration是如何被扫出来的
