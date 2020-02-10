@@ -977,14 +977,16 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * @see #doClose()
 	 * @see #registerShutdownHook()
 	 */
-	@Override
+	@Override//close方法的实现
 	public void close() {
 		synchronized (this.startupShutdownMonitor) {
+			//核心方法
 			doClose();
 			// If we registered a JVM shutdown hook, we don't need it anymore now:
 			// We've already explicitly closed the context.
 			if (this.shutdownHook != null) {
 				try {
+					//removeshutdownHook
 					Runtime.getRuntime().removeShutdownHook(this.shutdownHook);
 				}
 				catch (IllegalStateException ex) {
@@ -1013,7 +1015,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			LiveBeansView.unregisterApplicationContext(this);
 
 			try {
-				// Publish shutdown event.
+				// Publish shutdown event.推送ContextClosed的信息
 				publishEvent(new ContextClosedEvent(this));
 			}
 			catch (Throwable ex) {
@@ -1031,20 +1033,22 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			}
 
 			// Destroy all cached singletons in the context's BeanFactory.
+			//销毁beans
 			destroyBeans();
 
 			// Close the state of this context itself.
+			//关闭BeanFactory
 			closeBeanFactory();
 
 			// Let subclasses do some final clean-up if they wish...
-			onClose();
+			onClose(); //未实现的方法，可以让子类去实现
 
 			// Reset local application listeners to pre-refresh state.
 			if (this.earlyApplicationListeners != null) {
 				this.applicationListeners.clear();
 				this.applicationListeners.addAll(this.earlyApplicationListeners);
 			}
-
+			//转换目前context的状态
 			// Switch to inactive.
 			this.active.set(false);
 		}
