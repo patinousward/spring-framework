@@ -146,6 +146,7 @@ final class PostProcessorRegistrationDelegate {
 
 			// Now, invoke the postProcessBeanFactory callback of all processors handled so far.
 			// 和上面invokeBeanDefinitionRegistryPostProcessors 方法只是传入参数 不同
+			//springboot@Configuration注解和spring.factories 都走这步
 			invokeBeanFactoryPostProcessors(registryProcessors, beanFactory);
 			//最后调用regular 类型的processor
 			invokeBeanFactoryPostProcessors(regularPostProcessors, beanFactory);
@@ -335,6 +336,8 @@ final class PostProcessorRegistrationDelegate {
 			Collection<? extends BeanFactoryPostProcessor> postProcessors, ConfigurableListableBeanFactory beanFactory) {
 
 		for (BeanFactoryPostProcessor postProcessor : postProcessors) {
+			//核心方法
+			//springboot@Configuration注解和spring.factories -> org.springframework.context.annotation.ConfigurationClassPostProcessor#postProcessBeanDefinitionRegistry
 			postProcessor.postProcessBeanFactory(beanFactory);
 		}
 	}
