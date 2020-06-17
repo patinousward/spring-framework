@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,13 @@ package org.springframework.web.servlet.config.annotation;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import org.joda.time.DateTime;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.DirectFieldAccessor;
 import org.springframework.context.ApplicationContext;
@@ -46,9 +47,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.AbstractJackson2HttpMessageConverter;
 import org.springframework.http.converter.xml.MappingJackson2XmlHttpMessageConverter;
-import org.springframework.mock.web.test.MockHttpServletRequest;
-import org.springframework.mock.web.test.MockHttpServletResponse;
-import org.springframework.mock.web.test.MockServletContext;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.PathMatcher;
@@ -84,6 +82,9 @@ import org.springframework.web.servlet.resource.ResourceUrlProviderExposingInter
 import org.springframework.web.servlet.view.BeanNameViewResolver;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 import org.springframework.web.servlet.view.ViewResolverComposite;
+import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
+import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
+import org.springframework.web.testfixture.servlet.MockServletContext;
 import org.springframework.web.util.UrlPathHelper;
 
 import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
@@ -155,7 +156,7 @@ public class WebMvcConfigurationSupportTests {
 	}
 
 	@Test
-	public void requestMappingHandlerAdapter() throws Exception {
+	public void requestMappingHandlerAdapter() {
 		ApplicationContext context = initContext(WebConfig.class);
 		RequestMappingHandlerAdapter adapter = context.getBean(RequestMappingHandlerAdapter.class);
 		List<HttpMessageConverter<?>> converters = adapter.getMessageConverters();
@@ -195,7 +196,7 @@ public class WebMvcConfigurationSupportTests {
 	}
 
 	@Test
-	public void uriComponentsContributor() throws Exception {
+	public void uriComponentsContributor() {
 		ApplicationContext context = initContext(WebConfig.class);
 		CompositeUriComponentsContributor uriComponentsContributor = context.getBean(
 				MvcUriComponentsBuilder.MVC_URI_COMPONENTS_CONTRIBUTOR_BEAN_NAME,
@@ -206,7 +207,7 @@ public class WebMvcConfigurationSupportTests {
 
 	@Test
 	@SuppressWarnings("unchecked")
-	public void handlerExceptionResolver() throws Exception {
+	public void handlerExceptionResolver() {
 		ApplicationContext context = initContext(WebConfig.class);
 		HandlerExceptionResolverComposite compositeResolver =
 				context.getBean("handlerExceptionResolver", HandlerExceptionResolverComposite.class);
@@ -299,7 +300,7 @@ public class WebMvcConfigurationSupportTests {
 	}
 
 	@Test
-	public void defaultPathMatchConfiguration() throws Exception {
+	public void defaultPathMatchConfiguration() {
 		ApplicationContext context = initContext(WebConfig.class);
 		UrlPathHelper urlPathHelper = context.getBean(UrlPathHelper.class);
 		PathMatcher pathMatcher = context.getBean(PathMatcher.class);

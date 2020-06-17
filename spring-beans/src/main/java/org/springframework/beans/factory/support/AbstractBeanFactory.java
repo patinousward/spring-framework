@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -34,6 +35,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeanWrapper;
@@ -65,6 +68,7 @@ import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.beans.factory.config.DestructionAwareBeanPostProcessor;
 import org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessor;
 import org.springframework.beans.factory.config.Scope;
+import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
 import org.springframework.core.AttributeAccessor;
 import org.springframework.core.DecoratingClassLoader;
 import org.springframework.core.NamedThreadLocal;
@@ -150,14 +154,12 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	/** String resolvers to apply e.g. to annotation attribute values. */
 	private final List<StringValueResolver> embeddedValueResolvers = new CopyOnWriteArrayList<>();
 
-	/** BeanPostProcessors to apply in createBean. */
-	private final List<BeanPostProcessor> beanPostProcessors = new CopyOnWriteArrayList<>();
+	/** BeanPostProcessors to apply. */
+	private final List<BeanPostProcessor> beanPostProcessors = new BeanPostProcessorCacheAwareList();
 
-	/** Indicates whether any InstantiationAwareBeanPostProcessors have been registered. */
-	private volatile boolean hasInstantiationAwareBeanPostProcessors;
-
-	/** Indicates whether any DestructionAwareBeanPostProcessors have been registered. */
-	private volatile boolean hasDestructionAwareBeanPostProcessors;
+	/** Cache of pre-filtered post-processors. */
+	@Nullable
+	private volatile BeanPostProcessorCache beanPostProcessorCache;
 
 	/** Map from scope identifier String to corresponding Scope. */
 	private final Map<String, Scope> scopes = new LinkedHashMap<>(8);
@@ -242,11 +244,11 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * @throws BeansException if the bean could not be created
 	 */
 	@SuppressWarnings("unchecked")
-	protected <T> T doGetBean(final String name, @Nullable final Class<T> requiredType,
-			@Nullable final Object[] args, boolean typeCheckOnly) throws BeansException {
-		// <1> 返回 bean 名称，剥离工厂引用前缀。
-		// 如果 name 是 alias ，则获取对应映射的 beanName 。
-		final String beanName = transformedBeanName(name);
+	protected <T> T doGetBean(
+			String name, @Nullable Class<T> requiredType, @Nullable Object[] args, boolean typeCheckOnly)
+			throws BeansException {
+
+		String beanName = transformedBeanName(name);
 		Object bean;
 		// 先从缓存中或者实例工厂中获取 Bean 对象（没有的时候再创建）
 		// Eagerly check singleton cache for manually registered singletons.
@@ -308,9 +310,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			}
 
 			try {
-				//<6> 从容器中获取 beanName 相应的 GenericBeanDefinition 对象，并将其转换为 RootBeanDefinition 对象
-				final RootBeanDefinition mbd = getMergedLocalBeanDefinition(beanName);
-				//检查给定的合并的 BeanDefinition
+				RootBeanDefinition mbd = getMergedLocalBeanDefinition(beanName);
 				checkMergedBeanDefinition(mbd, beanName, args);
 
 				// Guarantee initialization of beans that the current bean depends on.
@@ -385,8 +385,10 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				else {
 					// 从指定的 scope 下创建 bean
 					String scopeName = mbd.getScope();
-					//有多种scope
-					final Scope scope = this.scopes.get(scopeName);
+					if (!StringUtils.hasLength(scopeName)) {
+						throw new IllegalStateException("No scope name defined for bean ´" + beanName + "'");
+					}
+					Scope scope = this.scopes.get(scopeName);
 					if (scope == null) {
 						throw new IllegalStateException("No Scope registered for scope name '" + scopeName + "'");
 					}
@@ -404,10 +406,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 						bean = getObjectForBeanInstance(scopedInstance, name, beanName, mbd);
 					}
 					catch (IllegalStateException ex) {
-						throw new BeanCreationException(beanName,
-								"Scope '" + scopeName + "' is not active for the current thread; consider " +
-								"defining a scoped proxy for this bean if you intend to refer to it from a singleton",
-								ex);
+						throw new ScopeNotActiveException(beanName, scopeName, ex);
 					}
 				}
 			}
@@ -514,10 +513,12 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			return false;
 		}
 		if (isFactoryBean(beanName, mbd)) {
-			final FactoryBean<?> fb = (FactoryBean<?>) getBean(FACTORY_BEAN_PREFIX + beanName);
+			FactoryBean<?> fb = (FactoryBean<?>) getBean(FACTORY_BEAN_PREFIX + beanName);
 			if (System.getSecurityManager() != null) {
-				return AccessController.doPrivileged((PrivilegedAction<Boolean>) () ->
-						((fb instanceof SmartFactoryBean && ((SmartFactoryBean<?>) fb).isPrototype()) || !fb.isSingleton()),
+				return AccessController.doPrivileged(
+						(PrivilegedAction<Boolean>) () ->
+								((fb instanceof SmartFactoryBean && ((SmartFactoryBean<?>) fb).isPrototype()) ||
+										!fb.isSingleton()),
 						getAccessControlContext());
 			}
 			else {
@@ -544,14 +545,13 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * {@code ResolvableType})
 	 * @return {@code true} if the bean type matches, {@code false} if it
 	 * doesn't match or cannot be determined yet
-	 * @throws NoSuchBeanDefinitionException if there is no bean with the given
-	 * name
+	 * @throws NoSuchBeanDefinitionException if there is no bean with the given name
 	 * @since 5.2
 	 * @see #getBean
 	 * @see #getType
 	 */
-	boolean isTypeMatch(String name, ResolvableType typeToMatch,
-			boolean allowFactoryBeanInit) throws NoSuchBeanDefinitionException {
+	protected boolean isTypeMatch(String name, ResolvableType typeToMatch, boolean allowFactoryBeanInit)
+			throws NoSuchBeanDefinitionException {
 
 		String beanName = transformedBeanName(name);
 		boolean isFactoryDereference = BeanFactoryUtils.isFactoryDereference(name);
@@ -699,6 +699,12 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	@Override
 	@Nullable
 	public Class<?> getType(String name) throws NoSuchBeanDefinitionException {
+		return getType(name, true);
+	}
+
+	@Override
+	@Nullable
+	public Class<?> getType(String name, boolean allowFactoryBeanInit) throws NoSuchBeanDefinitionException {
 		String beanName = transformedBeanName(name);
 
 		// Check manually registered singletons.
@@ -738,7 +744,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		if (beanClass != null && FactoryBean.class.isAssignableFrom(beanClass)) {
 			if (!BeanFactoryUtils.isFactoryDereference(name)) {
 				// If it's a FactoryBean, we want to look at what it creates, not at the factory class.
-				return getTypeForFactoryBean(beanName, mbd, true).resolve();
+				return getTypeForFactoryBean(beanName, mbd, allowFactoryBeanInit).resolve();
 			}
 			else {
 				return beanClass;
@@ -762,8 +768,9 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			aliases.add(fullBeanName);
 		}
 		String[] retrievedAliases = super.getAliases(beanName);
+		String prefix = factoryPrefix ? FACTORY_BEAN_PREFIX : "";
 		for (String retrievedAlias : retrievedAliases) {
-			String alias = (factoryPrefix ? FACTORY_BEAN_PREFIX : "") + retrievedAlias;
+			String alias = prefix + retrievedAlias;
 			if (!alias.equals(name)) {
 				aliases.add(alias);
 			}
@@ -804,6 +811,9 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	public void setParentBeanFactory(@Nullable BeanFactory parentBeanFactory) {
 		if (this.parentBeanFactory != null && this.parentBeanFactory != parentBeanFactory) {
 			throw new IllegalStateException("Already associated with parent BeanFactory: " + this.parentBeanFactory);
+		}
+		if (this == parentBeanFactory) {
+			throw new IllegalStateException("Cannot set parent bean factory to self");
 		}
 		this.parentBeanFactory = parentBeanFactory;
 	}
@@ -955,15 +965,19 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		Assert.notNull(beanPostProcessor, "BeanPostProcessor must not be null");
 		// Remove from old position, if any
 		this.beanPostProcessors.remove(beanPostProcessor);
-		// Track whether it is instantiation/destruction aware
-		if (beanPostProcessor instanceof InstantiationAwareBeanPostProcessor) {
-			this.hasInstantiationAwareBeanPostProcessors = true;
-		}
-		if (beanPostProcessor instanceof DestructionAwareBeanPostProcessor) {
-			this.hasDestructionAwareBeanPostProcessors = true;
-		}
 		// Add to end of list
 		this.beanPostProcessors.add(beanPostProcessor);
+	}
+
+	/**
+	 * Add new BeanPostProcessors that will get applied to beans created
+	 * by this factory. To be invoked during factory configuration.
+	 * @since 5.3
+	 * @see #addBeanPostProcessor
+	 */
+	public void addBeanPostProcessors(Collection<? extends BeanPostProcessor> beanPostProcessors) {
+		this.beanPostProcessors.removeAll(beanPostProcessors);
+		this.beanPostProcessors.addAll(beanPostProcessors);
 	}
 
 	@Override
@@ -980,13 +994,41 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	}
 
 	/**
+	 * Return the internal cache of pre-filtered post-processors,
+	 * freshly (re-)building it if necessary.
+	 * @since 5.3
+	 */
+	BeanPostProcessorCache getBeanPostProcessorCache() {
+		BeanPostProcessorCache bpCache = this.beanPostProcessorCache;
+		if (bpCache == null) {
+			bpCache = new BeanPostProcessorCache();
+			for (BeanPostProcessor bp : this.beanPostProcessors) {
+				if (bp instanceof InstantiationAwareBeanPostProcessor) {
+					bpCache.instantiationAware.add((InstantiationAwareBeanPostProcessor) bp);
+					if (bp instanceof SmartInstantiationAwareBeanPostProcessor) {
+						bpCache.smartInstantiationAware.add((SmartInstantiationAwareBeanPostProcessor) bp);
+					}
+				}
+				if (bp instanceof DestructionAwareBeanPostProcessor) {
+					bpCache.destructionAware.add((DestructionAwareBeanPostProcessor) bp);
+				}
+				if (bp instanceof MergedBeanDefinitionPostProcessor) {
+					bpCache.mergedDefinition.add((MergedBeanDefinitionPostProcessor) bp);
+				}
+			}
+			this.beanPostProcessorCache = bpCache;
+		}
+		return bpCache;
+	}
+
+	/**
 	 * Return whether this factory holds a InstantiationAwareBeanPostProcessor
-	 * that will get applied to singleton beans on shutdown.
+	 * that will get applied to singleton beans on creation.
 	 * @see #addBeanPostProcessor
 	 * @see org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessor
 	 */
 	protected boolean hasInstantiationAwareBeanPostProcessors() {
-		return this.hasInstantiationAwareBeanPostProcessors;
+		return !getBeanPostProcessorCache().instantiationAware.isEmpty();
 	}
 
 	/**
@@ -996,7 +1038,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * @see org.springframework.beans.factory.config.DestructionAwareBeanPostProcessor
 	 */
 	protected boolean hasDestructionAwareBeanPostProcessors() {
-		return this.hasDestructionAwareBeanPostProcessors;
+		return !getBeanPostProcessorCache().destructionAware.isEmpty();
 	}
 
 	@Override
@@ -1064,10 +1106,6 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			this.customEditors.putAll(otherAbstractFactory.customEditors);
 			this.typeConverter = otherAbstractFactory.typeConverter;
 			this.beanPostProcessors.addAll(otherAbstractFactory.beanPostProcessors);
-			this.hasInstantiationAwareBeanPostProcessors = this.hasInstantiationAwareBeanPostProcessors ||
-					otherAbstractFactory.hasInstantiationAwareBeanPostProcessors;
-			this.hasDestructionAwareBeanPostProcessors = this.hasDestructionAwareBeanPostProcessors ||
-					otherAbstractFactory.hasDestructionAwareBeanPostProcessors;
 			this.scopes.putAll(otherAbstractFactory.scopes);
 			this.securityContextProvider = otherAbstractFactory.securityContextProvider;
 		}
@@ -1191,7 +1229,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * @param mbd the merged bean definition
 	 */
 	protected void destroyBean(String beanName, Object bean, RootBeanDefinition mbd) {
-		new DisposableBeanAdapter(bean, beanName, mbd, getBeanPostProcessors(), getAccessControlContext()).destroy();
+		new DisposableBeanAdapter(
+				bean, beanName, mbd, getBeanPostProcessorCache().destructionAware, getAccessControlContext()).destroy();
 	}
 
 	@Override
@@ -1355,7 +1394,6 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 			if (mbd == null || mbd.stale) {
 				previous = mbd;
-				mbd = null;
 				if (bd.getParentName() == null) {
 					// Use copy of given root bean definition.
 					//如果bd本身就是一个RootBeanDefinition 就clone一个，否则直接new一个RootBeanDefinition，将GenericBeanDefinition 封装进入，然后返回
@@ -1386,7 +1424,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 							else {
 								throw new NoSuchBeanDefinitionException(parentBeanName,
 										"Parent name '" + parentBeanName + "' is equal to bean name '" + beanName +
-										"': cannot be resolved without an AbstractBeanFactory parent");
+										"': cannot be resolved without a ConfigurableBeanFactory parent");
 							}
 						}
 					}
@@ -1401,7 +1439,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 				// Set default singleton scope, if not configured before.
 				if (!StringUtils.hasLength(mbd.getScope())) {
-					mbd.setScope(RootBeanDefinition.SCOPE_SINGLETON);
+					mbd.setScope(SCOPE_SINGLETON);
 				}
 
 				// A bean contained in a non-singleton bean cannot be a singleton itself.
@@ -1497,7 +1535,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * @throws CannotLoadBeanClassException if we failed to load the class
 	 */
 	@Nullable
-	protected Class<?> resolveBeanClass(final RootBeanDefinition mbd, String beanName, final Class<?>... typesToMatch)
+	protected Class<?> resolveBeanClass(RootBeanDefinition mbd, String beanName, Class<?>... typesToMatch)
 			throws CannotLoadBeanClassException {
 
 		try {
@@ -1506,8 +1544,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				return mbd.getBeanClass();
 			}
 			if (System.getSecurityManager() != null) {
-				return AccessController.doPrivileged((PrivilegedExceptionAction<Class<?>>) () ->
-					doResolveBeanClass(mbd, typesToMatch), getAccessControlContext());
+				return AccessController.doPrivileged((PrivilegedExceptionAction<Class<?>>)
+						() -> doResolveBeanClass(mbd, typesToMatch), getAccessControlContext());
 			}
 			else {
 				return doResolveBeanClass(mbd, typesToMatch);
@@ -1647,7 +1685,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		Boolean result = mbd.isFactoryBean;
 		if (result == null) {
 			Class<?> beanType = predictBeanType(beanName, mbd, FactoryBean.class);
-			result = beanType != null && FactoryBean.class.isAssignableFrom(beanType);
+			result = (beanType != null && FactoryBean.class.isAssignableFrom(beanType));
 			mbd.isFactoryBean = result;
 		}
 		return result;
@@ -1696,7 +1734,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					logger.trace(LogMessage.format("Bean creation exception on lazy FactoryBean type check: %s", ex));
 				}
 				else {
-					logger.debug(LogMessage.format("Bean creation exception on non-lazy FactoryBean type check: %s", ex));
+					logger.debug(LogMessage.format("Bean creation exception on eager FactoryBean type check: %s", ex));
 				}
 				onSuppressedException(ex);
 			}
@@ -1818,7 +1856,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * Get the object for the given bean instance, either the bean
 	 * instance itself or its created object in case of a FactoryBean.
 	 * @param beanInstance the shared bean instance
-	 * @param name name that may include factory dereference prefix
+	 * @param name the name that may include factory dereference prefix
 	 * @param beanName the canonical bean name
 	 * @param mbd the merged bean definition
 	 * @return the object to expose for the bean
@@ -1836,24 +1874,24 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			if (!(beanInstance instanceof FactoryBean)) {
 				throw new BeanIsNotAFactoryException(beanName, beanInstance.getClass());
 			}
+			if (mbd != null) {
+				mbd.isFactoryBean = true;
+			}
+			return beanInstance;
 		}
 
 		// Now we have the bean instance, which may be a normal bean or a FactoryBean.
 		// If it's a FactoryBean, we use it to create a bean instance, unless the
 		// caller actually wants a reference to the factory.
-		// 到这里我们就有了一个 Bean 实例，当然该实例可能是会是是一个正常的 bean 又或者是一个 FactoryBean
-		// 如果是 FactoryBean，我我们则创建该 Bean
-		if (!(beanInstance instanceof FactoryBean) || BeanFactoryUtils.isFactoryDereference(name)) {
-			//如果beanInstance 不是FactoryBean 则直接返回beanInstance
-			//如果name 以& 开头，也直接返回（& 开头返回factoryBean，不以&开头返回factoryBean中getObject的方法）
+		if (!(beanInstance instanceof FactoryBean)) {
 			return beanInstance;
 		}
 		//下面应该就是factoryBean调用getObject的方法了
 		Object object = null;
-		//若 BeanDefinition 为 null，则从缓存中加载 Bean 对象
-		if (mbd == null) {
-			//this.factoryBeanObjectCache 集合缓存中获取这个bean
-			////存放的应该是beanname（factorybean的） 和getObject 创建bean之间的关系的map
+		if (mbd != null) {
+			mbd.isFactoryBean = true;
+		}
+		else {
 			object = getCachedObjectForFactoryBean(beanName);
 		}
 		// 若 object 依然为空，则可以确认，beanInstance 一定是 FactoryBean 。从而，使用 FactoryBean 获得 Bean 对象
@@ -1896,9 +1934,9 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * @see org.springframework.beans.factory.config.DestructionAwareBeanPostProcessor
 	 */
 	protected boolean requiresDestruction(Object bean, RootBeanDefinition mbd) {
-		return (bean.getClass() != NullBean.class &&
-				(DisposableBeanAdapter.hasDestroyMethod(bean, mbd) || (hasDestructionAwareBeanPostProcessors() &&
-						DisposableBeanAdapter.hasApplicableProcessors(bean, getBeanPostProcessors()))));
+		return (bean.getClass() != NullBean.class && (DisposableBeanAdapter.hasDestroyMethod(bean, mbd) ||
+				(hasDestructionAwareBeanPostProcessors() && DisposableBeanAdapter.hasApplicableProcessors(
+						bean, getBeanPostProcessorCache().destructionAware))));
 	}
 
 	/**
@@ -1920,8 +1958,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				// Register a DisposableBean implementation that performs all destruction
 				// work for the given bean: DestructionAwareBeanPostProcessors,
 				// DisposableBean interface, custom destroy method.
-				registerDisposableBean(beanName,
-						new DisposableBeanAdapter(bean, beanName, mbd, getBeanPostProcessors(), acc));
+				registerDisposableBean(beanName, new DisposableBeanAdapter(
+						bean, beanName, mbd, getBeanPostProcessorCache().destructionAware, acc));
 			}
 			else {
 				// A bean with a custom scope...
@@ -1929,8 +1967,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				if (scope == null) {
 					throw new IllegalStateException("No Scope registered for scope name '" + mbd.getScope() + "'");
 				}
-				scope.registerDestructionCallback(beanName,
-						new DisposableBeanAdapter(bean, beanName, mbd, getBeanPostProcessors(), acc));
+				scope.registerDestructionCallback(beanName, new DisposableBeanAdapter(
+						bean, beanName, mbd, getBeanPostProcessorCache().destructionAware, acc));
 			}
 		}
 	}
@@ -1991,5 +2029,118 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 */
 	protected abstract Object createBean(String beanName, RootBeanDefinition mbd, @Nullable Object[] args)
 			throws BeanCreationException;
+
+
+	/**
+	 * CopyOnWriteArrayList which resets the beanPostProcessorCache field on modification.
+	 *
+	 * @since 5.3
+	 */
+	private class BeanPostProcessorCacheAwareList extends CopyOnWriteArrayList<BeanPostProcessor> {
+
+		@Override
+		public BeanPostProcessor set(int index, BeanPostProcessor element) {
+			BeanPostProcessor result = super.set(index, element);
+			beanPostProcessorCache = null;
+			return result;
+		}
+
+		@Override
+		public boolean add(BeanPostProcessor o) {
+			boolean success = super.add(o);
+			beanPostProcessorCache = null;
+			return success;
+		}
+
+		@Override
+		public void add(int index, BeanPostProcessor element) {
+			super.add(index, element);
+			beanPostProcessorCache = null;
+		}
+
+		@Override
+		public BeanPostProcessor remove(int index) {
+			BeanPostProcessor result = super.remove(index);
+			beanPostProcessorCache = null;
+			return result;
+		}
+
+		@Override
+		public boolean remove(Object o) {
+			boolean success = super.remove(o);
+			if (success) {
+				beanPostProcessorCache = null;
+			}
+			return success;
+		}
+
+		@Override
+		public boolean removeAll(Collection<?> c) {
+			boolean success = super.removeAll(c);
+			if (success) {
+				beanPostProcessorCache = null;
+			}
+			return success;
+		}
+
+		@Override
+		public boolean retainAll(Collection<?> c) {
+			boolean success = super.retainAll(c);
+			if (success) {
+				beanPostProcessorCache = null;
+			}
+			return success;
+		}
+
+		@Override
+		public boolean addAll(Collection<? extends BeanPostProcessor> c) {
+			boolean success = super.addAll(c);
+			if (success) {
+				beanPostProcessorCache = null;
+			}
+			return success;
+		}
+
+		@Override
+		public boolean addAll(int index, Collection<? extends BeanPostProcessor> c) {
+			boolean success = super.addAll(index, c);
+			if (success) {
+				beanPostProcessorCache = null;
+			}
+			return success;
+		}
+
+		@Override
+		public boolean removeIf(Predicate<? super BeanPostProcessor> filter) {
+			boolean success = super.removeIf(filter);
+			if (success) {
+				beanPostProcessorCache = null;
+			}
+			return success;
+		}
+
+		@Override
+		public void replaceAll(UnaryOperator<BeanPostProcessor> operator) {
+			super.replaceAll(operator);
+			beanPostProcessorCache = null;
+		}
+	};
+
+
+	/**
+	 * Internal cache of pre-filtered post-processors.
+	 *
+	 * @since 5.3
+	 */
+	static class BeanPostProcessorCache {
+
+		final List<InstantiationAwareBeanPostProcessor> instantiationAware = new ArrayList<>();
+
+		final List<SmartInstantiationAwareBeanPostProcessor> smartInstantiationAware = new ArrayList<>();
+
+		final List<DestructionAwareBeanPostProcessor> destructionAware = new ArrayList<>();
+
+		final List<MergedBeanDefinitionPostProcessor> mergedDefinition = new ArrayList<>();
+	}
 
 }

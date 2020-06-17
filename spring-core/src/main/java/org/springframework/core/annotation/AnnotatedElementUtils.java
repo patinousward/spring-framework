@@ -111,7 +111,7 @@ public abstract class AnnotatedElementUtils {
 	 * @param element the annotated element
 	 * @param annotationType the annotation type on which to find meta-annotations
 	 * @return the names of all meta-annotations present on the annotation,
-	 * or {@code null} if not found
+	 * or an empty set if not found
 	 * @since 4.2
 	 * @see #getMetaAnnotationTypes(AnnotatedElement, String)
 	 * @see #hasMetaAnnotationTypes
@@ -756,32 +756,25 @@ public abstract class AnnotatedElementUtils {
 	}
 
 	private static MergedAnnotations getAnnotations(AnnotatedElement element) {
-		//SearchStrategy.INHERITED_ANNOTATIONS :搜索策略:会找注解上的注解
-		//AnnotationFilter.PLAIN 过滤 java.lang 和org.springframework.lang 包和其子包
-		//RepeatableContainers.none()  不展开重复的注解
-		return MergedAnnotations.from(element, SearchStrategy.INHERITED_ANNOTATIONS,
-				RepeatableContainers.none(), AnnotationFilter.PLAIN);
+		return MergedAnnotations.from(element, SearchStrategy.INHERITED_ANNOTATIONS, RepeatableContainers.none());
 	}
 
 	private static MergedAnnotations getRepeatableAnnotations(AnnotatedElement element,
 			@Nullable Class<? extends Annotation> containerType, Class<? extends Annotation> annotationType) {
 
 		RepeatableContainers repeatableContainers = RepeatableContainers.of(annotationType, containerType);
-		return MergedAnnotations.from(element, SearchStrategy.INHERITED_ANNOTATIONS,
-				repeatableContainers, AnnotationFilter.PLAIN);
+		return MergedAnnotations.from(element, SearchStrategy.INHERITED_ANNOTATIONS, repeatableContainers);
 	}
 
 	private static MergedAnnotations findAnnotations(AnnotatedElement element) {
-		return MergedAnnotations.from(element, SearchStrategy.TYPE_HIERARCHY,
-				RepeatableContainers.none(), AnnotationFilter.PLAIN);
+		return MergedAnnotations.from(element, SearchStrategy.TYPE_HIERARCHY, RepeatableContainers.none());
 	}
 
 	private static MergedAnnotations findRepeatableAnnotations(AnnotatedElement element,
 			@Nullable Class<? extends Annotation> containerType, Class<? extends Annotation> annotationType) {
 
 		RepeatableContainers repeatableContainers = RepeatableContainers.of(annotationType, containerType);
-		return MergedAnnotations.from(element, SearchStrategy.TYPE_HIERARCHY,
-				repeatableContainers, AnnotationFilter.PLAIN);
+		return MergedAnnotations.from(element, SearchStrategy.TYPE_HIERARCHY, repeatableContainers);
 	}
 
 	@Nullable
@@ -839,6 +832,6 @@ public abstract class AnnotatedElementUtils {
 			return this.annotations.clone();
 		}
 
-	};
+	}
 
 }
