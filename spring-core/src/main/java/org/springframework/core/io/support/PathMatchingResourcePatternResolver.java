@@ -281,6 +281,7 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 		if (locationPattern.startsWith(CLASSPATH_ALL_URL_PREFIX)) {
 			// a class path resource (multiple resources for same name possible)
 			//包含通配符
+			//classpath*:
 			if (getPathMatcher().isPattern(locationPattern.substring(CLASSPATH_ALL_URL_PREFIX.length()))) {
 				// a class path resource pattern
 				return findPathMatchingResources(locationPattern);
@@ -523,6 +524,7 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 			}
 			//jar 资源类型
 			else if (ResourceUtils.isJarURL(rootDirUrl) || isJarResource(rootDirResource)) {
+				//扫描注解走这里，但是在5.0和5.2走的是org.springframework.core.io.support.PathMatchingResourcePatternResolver.doFindPathMatchingFileResources
 				result.addAll(doFindPathMatchingJarResources(rootDirResource, rootDirUrl, subPattern));
 			}
 			//// 其它资源类型
@@ -661,6 +663,7 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 				// The Sun JRE does not return a slash here, but BEA JRockit does.
 				rootEntryPath = rootEntryPath + "/";
 			}
+			//核心方法
 			Set<Resource> result = new LinkedHashSet<>(8);
 			for (Enumeration<JarEntry> entries = jarFile.entries(); entries.hasMoreElements();) {
 				JarEntry entry = entries.nextElement();
@@ -714,6 +717,7 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 
 		File rootDir;
 		try {
+			//这里就递归获取所有的类文件了
 			rootDir = rootDirResource.getFile().getAbsoluteFile();
 		}
 		catch (FileNotFoundException ex) {

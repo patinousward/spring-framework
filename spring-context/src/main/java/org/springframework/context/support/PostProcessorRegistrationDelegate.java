@@ -105,6 +105,7 @@ final class PostProcessorRegistrationDelegate {
 			//将beanFactory中的和传入参数中的BeanDefinitionRegistryPostProcessor 类型的processor进行合并
 			registryProcessors.addAll(currentRegistryProcessors);
 			//beanFactory中的进行调用
+			//spring-boot @Configuration进入这个方法
 			invokeBeanDefinitionRegistryPostProcessors(currentRegistryProcessors, registry);
 			//清除掉
 			currentRegistryProcessors.clear();
@@ -331,6 +332,7 @@ final class PostProcessorRegistrationDelegate {
 			Collection<? extends BeanDefinitionRegistryPostProcessor> postProcessors, BeanDefinitionRegistry registry) {
 
 		for (BeanDefinitionRegistryPostProcessor postProcessor : postProcessors) {
+			//spring-boot 加载@Configuration的事ConfigurationClassPostProcessor
 			postProcessor.postProcessBeanDefinitionRegistry(registry);
 		}
 	}

@@ -264,6 +264,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 	 */
 	public void processConfigBeanDefinitions(BeanDefinitionRegistry registry) {
 		List<BeanDefinitionHolder> configCandidates = new ArrayList<>();
+		//cadidateName是此时已经注册的beanDefinition，包括run（xxx.class,args）中的xxx.class 其在org.springframework.boot.SpringApplication#prepareContext方法中就已经注册了
 		String[] candidateNames = registry.getBeanDefinitionNames();
 
 		for (String beanName : candidateNames) {
