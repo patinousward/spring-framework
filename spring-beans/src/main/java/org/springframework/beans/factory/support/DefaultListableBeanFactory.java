@@ -977,8 +977,9 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		//beanDefinitionMap  中是否已经存在这个beanName
 		BeanDefinition existingDefinition = this.beanDefinitionMap.get(beanName);
 		if (existingDefinition != null) {
-			if (!isAllowBeanDefinitionOverriding()) { //isAllowBeanDefinitionOverriding() 默认是true
+			if (!isAllowBeanDefinitionOverriding()) { //isAllowBeanDefinitionOverriding() 默认是true,但是注入的时候修改了属性
 				//如果不允许beanDefinition重写的话，直接抛出异常
+				//@Bean中如果方法名（beaname）重复了，会在这里抛出异常
 				throw new BeanDefinitionOverrideException(beanName, beanDefinition, existingDefinition);
 			}
 			//role = BeanDefinition.ROLE_APPLICATION 默认值

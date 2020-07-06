@@ -94,10 +94,11 @@ class ConditionEvaluator {
 		for (String[] conditionClasses : getConditionClasses(metadata)) {
 			for (String conditionClass : conditionClasses) {
 				Condition condition = getCondition(conditionClass, this.context.getClassLoader());
+				//解析类上所有的Condition注解
 				conditions.add(condition);
 			}
 		}
-
+		//注解排序
 		AnnotationAwareOrderComparator.sort(conditions);
 
 		for (Condition condition : conditions) {
